@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Çoklu Gelir & Gider Yönetim Tablosu</title>
+    <style>
+        :root {
+            --sidebar-width: 260px;
+            --primary: #1f4e78;
+            --primary-hover: #153858;
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --text-main: #333333;
+            --border-color: #e9ecef;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-color); margin: 0; padding: 0; color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+        
+        /* Sol Menü */
+        .sidebar { width: var(--sidebar-width); background: #2c3e50; color: #fff; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; box-sizing: border-box; }
+        .sidebar h2 { font-size: 18px; margin-top: 0; color: #ecf0f1; border-bottom: 1px solid #34495e; padding-bottom: 15px; }
+        .table-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex-grow: 1; }
+        .table-item { padding: 12px 15px; border-radius: 6px; cursor: pointer; margin-bottom: 5px; font-size: 14px; transition: background 0.2s; }
+        .table-item:hover { background: #34495e; }
+        .table-item.active { background: var(--primary); font-weight: bold; }
+        
+        .sidebar-footer { border-top: 1px solid #34495e; padding-top: 15px; display: flex; flex-direction: column; gap: 8px; }
+
+        /* Ana İçerik */
+        .main-content { flex-grow: 1; padding: 30px; box-sizing: border-box; overflow-y: auto; background: var(--bg-color); }
+        .container { max-width: 1000px; margin: 0 auto; background: var(--card-bg); padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        h1 { margin: 0; color: var(--primary); font-size: 22px; }
+        
+        .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+        button { padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; transition: opacity 0.2s; }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-success { background: #28a745; color: #fff; }
+        .btn-warning { background: #ffc107; color: #333; }
+        .btn-danger { background: #dc3545; color: #fff; }
+        button:hover { opacity: 0.9; }
+
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border-color); }
+        th { background: var(--primary); color: #fff; font-size: 14px; }
+        tr:nth-child(even) { background: #f9fbfd; }
+        input[type="text"], input[type="date"] { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px; }
+        .money-input { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px; text-align: right; }
+        
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .totals { background: #d9e1f2; font-weight: bold; font-size: 15px; }
+        .red { color: #dc3545; }
+        .green { color: #28a745; }
+
+        /* PDF / Yazdırma Modu Stilleri */
+        @media print {
+            body { background: #fff; display: block; height: auto; overflow: visible; }
+            .sidebar, .actions, .btn-danger, button { display: none !important; }
+            .main-content { padding: 0; background: #fff; overflow: visible; }
+            .container { box-shadow: none; padding: 0; max-width: 100%; }
+            input { border: none !important; background: transparent !important; padding: 0 !important; font-size: 13px !important; }
+            input[type="date"]::-webkit-calendar-picker-indicator { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Sol Menü -->
+<div class="sidebar">
+    <div>
+        <h2>Tablolarım</h2>
+        <ul class="table-list" id="tableList"></ul>
+    </div>
+    <div class="sidebar-footer">
+        <button class="btn-primary" onclick="createNewTable()" style="width:100%;">+ Yeni Tablo Ekle</button>
+        <button class="btn-danger" onclick="promptDeleteTable()" style="width:100%;">🗑️ Tablo Kaldır</button>
+        <button class="btn-success" onclick="exportData()" style="width:100%; font-size:13px;">💾 Tüm Yedeği İndir</button>
+        <button class="btn-warning" onclick="document.getElementById('importFile').click()" style="width:100%; font-size:13px;">📂 Yedek Yükle</button>
+        <input type="file" id="importFile" style="display:none" onchange="importData(event)">
+    </div>
+</div>
+
+<!-- Ana Çalışma Alanı -->
+<div class="main-content">
+    <div class="container" id="appContainer">
+        <div class="header-row">
+            <h1 id="currentTableName">Tablo Yükleniyor...</h1>
+        </div>
+        
+        <div class="actions">
+            <button class="btn-primary" onclick="addRow()">+ Yeni Satır Ekle</button>
+            <button class="btn-warning" onclick="window.print()">📄 PDF Olarak İndir</button>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 15%;">Tarih</th>
+                    <th style="width: 30%;">Gelir / Gider Kaynağı</th>
+                    <th style="width: 15%;" class="text-right">Gelir (₺)</th>
+                    <th style="width: 15%;" class="text-right">Gider (₺)</th>
+                    <th style="width: 15%;" class="text-right">Net Fark (₺)</th>
+                    <th style="width: 10%;" class="text-center">İşlem</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+            <tfoot>
+                <tr class="totals">
+                    <td colspan="2">GENEL TOPLAM</td>
+                    <td class="text-right" id="totalIncome">0,00 ₺</td>
+                    <td class="text-right" id="totalExpense">0,00 ₺</td>
+                    <td class="text-right" id="totalNet">0,00 ₺</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+<script>
+    let db = JSON.parse(localStorage.getItem('multiGelirGiderDB')) || {
+        "Ana Tablo": [
+            { date: '2026-10-01', source: 'market', income: '', expense: '1927.90' },
+            { date: '2026-09-26', source: 'kırtasiye', income: '', expense: '2069.84' }
+        ],
+        "Kantin İşletmesi": [
+            { date: '2026-10-02', source: 'toptancı alış', income: '', expense: '5000.00' },
+            { date: '2026-10-02', source: 'günlük hasılat', income: '7500.00', expense: '' }
+        ]
+    };
+
+    let activeTableKey = Object.keys(db)[0] || "Ana Tablo";
+
+    function saveDB() {
+        localStorage.setItem('multiGelirGiderDB', JSON.stringify(db));
+    }
+
+    function renderSidebar() {
+        const listEl = document.getElementById('tableList');
+        listEl.innerHTML = '';
+        
+        Object.keys(db).forEach(tableName => {
+            const li = document.createElement('li');
+            li.className = `table-item ${tableName === activeTableKey ? 'active' : ''}`;
+            li.innerText = tableName;
+            li.onclick = () => {
+                activeTableKey = tableName;
+                renderApp();
+            };
+            listEl.appendChild(li);
+        });
+    }
+
+    function renderApp() {
+        renderSidebar();
+        
+        document.getElementById('currentTableName').innerText = activeTableKey;
+        const rowsData = db[activeTableKey] || [];
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+        
+        let tIncome = 0;
+        let tExpense = 0;
+
+        rowsData.rowsData = rowsData || [];
+        rowsData.forEach((row, index) => {
+            const inc = parseFloat(row.income) || 0;
+            const exp = parseFloat(row.expense) || 0;
+            const net = inc - exp;
+
+            tIncome += inc;
+            tExpense += exp;
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><input type="date" value="${row.date || ''}" onchange="updateRow(${index}, 'date', this.value)"></td>
+                <td><input type="text" value="${row.source || ''}" placeholder="Kaynak adı..." oninput="updateRow(${index}, 'source', this.value)"></td>
+                <td class="text-right"><input type="text" class="money-input" value="${row.income !== '' && !isNaN(row.income) ? Number(row.income).toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : (row.income || '')}" placeholder="0,00" onfocus="unformatMoney(this)" onblur="formatMoney(this, ${index}, 'income')"></td>
+                <td class="text-right"><input type="text" class="money-input" value="${row.expense !== '' && !isNaN(row.expense) ? Number(row.expense).toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : (row.expense || '')}" placeholder="0,00" onfocus="unformatMoney(this)" onblur="formatMoney(this, ${index}, 'expense')"></td>
+                <td class="text-right ${net < 0 ? 'red' : (net > 0 ? 'green' : '')}">${net.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ₺</td>
+                <td class="text-center"><button class="btn-danger" onclick="deleteRow(${index})" style="padding:4px 8px; font-size:12px;">Sil</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        const tNet = tIncome - tExpense;
+        document.getElementById('totalIncome').innerText = tIncome.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₺';
+        document.getElementById('totalExpense').innerText = tExpense.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₺';
+        
+        const netEl = document.getElementById('totalNet');
+        netEl.innerText = tNet.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₺';
+        netEl.className = "text-right " + (tNet < 0 ? 'red' : (tNet > 0 ? 'green' : ''));
+
+        saveDB();
+    }
+
+    function unformatMoney(input) {
+        let val = input.value.replace(/\s?[₺TL]/g, '').replace(/\./g, '').replace(',', '.');
+        input.value = val === '0' || val === '0.00' || isNaN(val) ? '' : val;
+    }
+
+    function formatMoney(input, index, field) {
+        let rawVal = input.value.replace(',', '.');
+        let num = parseFloat(rawVal);
+        if (isNaN(num)) {
+            db[activeTableKey][index][field] = '';
+            input.value = '';
+        } else {
+            db[activeTableKey][index][field] = num;
+            input.value = num.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+        renderApp();
+    }
+
+    function addRow() {
+        if (!db[activeTableKey]) db[activeTableKey] = [];
+        db[activeTableKey].push({ date: '', source: '', income: '', expense: '' });
+        renderApp();
+    }
+
+    function updateRow(index, field, value) {
+        db[activeTableKey][index][field] = value;
+        saveDB();
+    }
+
+    function deleteRow(index) {
+        db[activeTableKey].splice(index, 1);
+        renderApp();
+    }
+
+    function createNewTable() {
+        const name = prompt("Yeni tablonun adı nedir? (Örn: Kantin, Ev, Proje)");
+        if (!name) return;
+        const trimmed = name.trim();
+        if (db[trimmed]) {
+            alert("Bu isimde bir tablo zaten var!");
+            return;
+        }
+        db[trimmed] = [];
+        activeTableKey = trimmed;
+        saveDB();
+        renderApp();
+    }
+
+    function promptDeleteTable() {
+        const tableNames = Object.keys(db);
+        if (tableNames.length <= 1) {
+            alert("Sistemde en az bir tablo kalmalıdır, silinemez!");
+            return;
+        }
+        
+        let promptMsg = "Silmek istediğiniz tablonun numarasını girin:\n\n";
+        tableNames.forEach((name, idx) => {
+            promptMsg += `${idx + 1} - ${name}\n`;
+        });
+        
+        const selection = prompt(promptMsg);
+        if (selection === null) return;
+        
+        const index = parseInt(selection) - 1;
+        if (isNaN(index) || index < 0 || index >= tableNames.KeyLength && index >= tableNames.length) {
+            alert("Geçersiz seçim!");
+            return;
+        }
+        
+        const targetTable = tableNames[index];
+        if (confirm(`"${targetTable}" tablosunu tamamen silmek istediğinize emin misiniz?`)) {
+            delete db[targetTable];
+            activeTableKey = Object.keys(db)[0];
+            saveDB();
+            renderApp();
+        }
+    }
+
+    function exportData() {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", "tum_tablolar_yedek.json");
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+    }
+
+    function importData(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const imported = JSON.parse(e.target.result);
+                if (typeof imported === 'object' && imported !== null) {
+                    db = imported;
+                    activeTableKey = Object.keys(db)[0] || "Ana Tablo";
+                    renderApp();
+                    alert("Tüm yedek başarıyla yüklendi!");
+                } else {
+                    alert("Geçersiz yedek formatı!");
+                }
+            } catch (err) {
+                alert("Yedek dosyası okunamadı!");
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    renderApp();
+</script>
+
+</body>
+</html>
