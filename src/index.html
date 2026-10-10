@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Çoklu Gelir & Gider Yönetim Tablosu</title>
+    <title>Çoklu Gelir & Gider Yönetim Paneli</title>
     <style>
         :root {
             --sidebar-width: 260px;
@@ -32,7 +32,7 @@
         .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         h1 { margin: 0; color: var(--primary); font-size: 22px; }
         
-        .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+        .actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 20px; }
         button { padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; transition: opacity 0.2s; }
         .btn-primary { background: var(--primary); color: #fff; }
         .btn-success { background: #28a745; color: #fff; }
@@ -40,18 +40,43 @@
         .btn-danger { background: #dc3545; color: #fff; }
         button:hover { opacity: 0.9; }
 
+        .search-input { padding: 9px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 14px; width: 220px; outline: none; }
+
         table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border-color); }
-        th { background: var(--primary); color: #fff; font-size: 14px; }
+        th { background: var(--primary); color: #fff; font-size: 14px; user-select: none; }
+        th.sortable { cursor: pointer; }
+        th.sortable:hover { background: var(--primary-hover); }
         tr:nth-child(even) { background: #f9fbfd; }
-        input[type="text"], input[type="date"] { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px; }
-        .money-input { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px; text-align: right; }
+        
+        /* Girdiler ve Takvim Düzeltmesi */
+        input[type="text"], select { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px; background: #fff; color: #333; }
+        
+        input[type="date"] { 
+            width: 100%; 
+            padding: 8px; 
+            box-sizing: border-box; 
+            border: 1px solid #ced4da; 
+            border-radius: 4px; 
+            font-size: 14px; 
+            background: #fff; 
+            color: #333; 
+            color-scheme: light; /* Takvimi karanlık mod yerine her zaman şeffaf/aydınlık moda zorlar */
+        }
+        
+        .money-input { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px; text-align: right; background: #fff; color: #333; }
         
         .text-right { text-align: right; }
         .text-center { text-align: center; }
         .totals { background: #d9e1f2; font-weight: bold; font-size: 15px; }
         .red { color: #dc3545; }
         .green { color: #28a745; }
+
+        /* Özel Modern Modal Tasarımı */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-card { background: #fff; padding: 25px; border-radius: 12px; width: 350px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); display: flex; flex-direction: column; gap: 15px; }
+        .modal-card h3 { margin: 0; color: var(--primary); font-size: 18px; }
+        .modal-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
 
         /* PDF / Yazdırma Modu Stilleri */
         @media print {
@@ -73,8 +98,8 @@
         <ul class="table-list" id="tableList"></ul>
     </div>
     <div class="sidebar-footer">
-        <button class="btn-primary" onclick="createNewTable()" style="width:100%;">+ Yeni Tablo Ekle</button>
-        <button class="btn-danger" onclick="promptDeleteTable()" style="width:100%;">🗑️ Tablo Kaldır</button>
+        <button class="btn-primary" onclick="openNewTableModal()" style="width:100%;">+ Yeni Tablo Ekle</button>
+        <button class="btn-danger" onclick="openDeleteTableModal()" style="width:100%;">🗑️ Tablo Kaldır</button>
         <button class="btn-success" onclick="exportData()" style="width:100%; font-size:13px;">💾 Tüm Yedeği İndir</button>
         <button class="btn-warning" onclick="document.getElementById('importFile').click()" style="width:100%; font-size:13px;">📂 Yedek Yükle</button>
         <input type="file" id="importFile" style="display:none" onchange="importData(event)">
@@ -91,12 +116,13 @@
         <div class="actions">
             <button class="btn-primary" onclick="addRow()">+ Yeni Satır Ekle</button>
             <button class="btn-warning" onclick="window.print()">📄 PDF Olarak İndir</button>
+            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Kaynak ara..." oninput="renderApp()">
         </div>
 
         <table>
             <thead>
                 <tr>
-                    <th style="width: 15%;">Tarih</th>
+                    <th style="width: 15%;" class="sortable" onclick="toggleSort()">Tarih <span id="sortIndicator">↕</span></th>
                     <th style="width: 30%;">Gelir / Gider Kaynağı</th>
                     <th style="width: 15%;" class="text-right">Gelir (₺)</th>
                     <th style="width: 15%;" class="text-right">Gider (₺)</th>
@@ -118,6 +144,31 @@
     </div>
 </div>
 
+<!-- ÖZEL YENİ TABLO MODALI -->
+<div class="modal-overlay" id="newTableModal">
+    <div class="modal-card">
+        <h3>Yeni Tablo Ekle</h3>
+        <input type="text" id="newTableNameInput" placeholder="Tablo adı (Örn: Kantin, Ev)...">
+        <div class="modal-buttons">
+            <button class="btn-warning" onclick="closeModals()">İptal</button>
+            <button class="btn-primary" onclick="confirmNewTable()">Oluştur</button>
+        </div>
+    </div>
+</div>
+
+<!-- ÖZEL TABLO KALDIR MODALI -->
+<div class="modal-overlay" id="deleteTableModal">
+    <div class="modal-card">
+        <h3>Tablo Kaldır</h3>
+        <p style="margin:0; font-size:13px; color:#666;">Silmek istediğiniz tabloyu seçin:</p>
+        <select id="deleteTableSelect"></select>
+        <div class="modal-buttons">
+            <button class="btn-warning" onclick="closeModals()">İptal</button>
+            <button class="btn-danger" onclick="confirmDeleteTable()">Tabloyu Sil</button>
+        </div>
+    </div>
+</div>
+
 <script>
     let db = JSON.parse(localStorage.getItem('multiGelirGiderDB')) || {
         "Ana Tablo": [
@@ -131,6 +182,7 @@
     };
 
     let activeTableKey = Object.keys(db)[0] || "Ana Tablo";
+    let sortState = 0; 
 
     function saveDB() {
         localStorage.setItem('multiGelirGiderDB', JSON.stringify(db));
@@ -146,25 +198,50 @@
             li.innerText = tableName;
             li.onclick = () => {
                 activeTableKey = tableName;
+                sortState = 0;
                 renderApp();
             };
             listEl.appendChild(li);
         });
     }
 
+    function toggleSort() {
+        sortState = (sortState + 1) % 3;
+        renderApp();
+    }
+
     function renderApp() {
         renderSidebar();
         
         document.getElementById('currentTableName').innerText = activeTableKey;
-        const rowsData = db[activeTableKey] || [];
+        let rowsData = db[activeTableKey] || [];
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+        
+        const indicator = document.getElementById('sortIndicator');
+        if (sortState === 0) indicator.innerText = '↕';
+        else if (sortState === 1) indicator.innerText = '↓ (Yeni)';
+        else if (sortState === 2) indicator.innerText = '↑ (Eski)';
+
         const tbody = document.getElementById('tableBody');
         tbody.innerHTML = '';
         
         let tIncome = 0;
         let tExpense = 0;
 
-        rowsData.rowsData = rowsData || [];
-        rowsData.forEach((row, index) => {
+        let processedRows = rowsData.map((row, originalIndex) => ({ ...row, originalIndex }));
+
+        if (searchTerm) {
+            processedRows = processedRows.filter(r => (r.source || '').toLowerCase().includes(searchTerm));
+        }
+
+        if (sortState === 1) {
+            processedRows.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+        } else if (sortState === 2) {
+            processedRows.sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
+        }
+
+        processedRows.forEach((row) => {
+            const index = row.originalIndex;
             const inc = parseFloat(row.income) || 0;
             const exp = parseFloat(row.expense) || 0;
             const net = inc - exp;
@@ -215,7 +292,8 @@
 
     function addRow() {
         if (!db[activeTableKey]) db[activeTableKey] = [];
-        db[activeTableKey].push({ date: '', source: '', income: '', expense: '' });
+        const today = new Date().toISOString().split('T')[0];
+        db[activeTableKey].push({ date: today, source: '', income: '', expense: '' });
         renderApp();
     }
 
@@ -229,8 +307,15 @@
         renderApp();
     }
 
-    function createNewTable() {
-        const name = prompt("Yeni tablonun adı nedir? (Örn: Kantin, Ev, Proje)");
+    /* MODAL İŞLEMLERİ */
+    function openNewTableModal() {
+        document.getElementById('newTableNameInput').value = '';
+        document.getElementById('newTableModal').style.display = 'flex';
+        document.getElementById('newTableNameInput').focus();
+    }
+
+    function confirmNewTable() {
+        const name = document.getElementById('newTableNameInput').value;
         if (!name) return;
         const trimmed = name.trim();
         if (db[trimmed]) {
@@ -240,37 +325,49 @@
         db[trimmed] = [];
         activeTableKey = trimmed;
         saveDB();
+        closeModals();
         renderApp();
     }
 
-    function promptDeleteTable() {
+    function openDeleteTableModal() {
         const tableNames = Object.keys(db);
         if (tableNames.length <= 1) {
             alert("Sistemde en az bir tablo kalmalıdır, silinemez!");
             return;
         }
-        
-        let promptMsg = "Silmek istediğiniz tablonun numarasını girin:\n\n";
-        tableNames.forEach((name, idx) => {
-            promptMsg += `${idx + 1} - ${name}\n`;
+        const select = document.getElementById('deleteTableSelect');
+        select.innerHTML = '';
+        tableNames.forEach(name => {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.innerText = name;
+            select.appendChild(opt);
         });
+        document.getElementById('deleteTableModal').style.display = 'flex';
+    }
+
+    function confirmDeleteTable() {
+        const select = document.getElementById('deleteTableSelect');
+        const targetTable = select.value;
         
-        const selection = prompt(promptMsg);
-        if (selection === null) return;
-        
-        const index = parseInt(selection) - 1;
-        if (isNaN(index) || index < 0 || index >= tableNames.KeyLength && index >= tableNames.length) {
-            alert("Geçersiz seçim!");
+        if (Object.keys(db).length <= 1) {
+            alert("En az bir tablo kalmalıdır!");
             return;
         }
-        
-        const targetTable = tableNames[index];
+
         if (confirm(`"${targetTable}" tablosunu tamamen silmek istediğinize emin misiniz?`)) {
             delete db[targetTable];
             activeTableKey = Object.keys(db)[0];
+            sortState = 0;
             saveDB();
+            closeModals();
             renderApp();
         }
+    }
+
+    function closeModals() {
+        document.getElementById('newTableModal').style.display = 'none';
+        document.getElementById('deleteTableModal').style.display = 'none';
     }
 
     function exportData() {
@@ -293,6 +390,7 @@
                 if (typeof imported === 'object' && imported !== null) {
                     db = imported;
                     activeTableKey = Object.keys(db)[0] || "Ana Tablo";
+                    sortState = 0;
                     renderApp();
                     alert("Tüm yedek başarıyla yüklendi!");
                 } else {
