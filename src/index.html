@@ -14,24 +14,25 @@
             --border-color: #e9ecef;
         }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-color); margin: 0; padding: 0; color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
-        
-        /* Sol Menü */
-        .sidebar { width: var(--sidebar-width); background: #2c3e50; color: #fff; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; box-sizing: border-box; }
-        .sidebar h2 { font-size: 18px; margin-top: 0; color: #ecf0f1; border-bottom: 1px solid #34495e; padding-bottom: 15px; }
-        .table-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex-grow: 1; }
-        .table-item { padding: 12px 15px; border-radius: 6px; cursor: pointer; margin-bottom: 5px; font-size: 14px; transition: background 0.2s; }
+         
+        /* Sol Menü (Kaydırma Sorunu Giderildi) */
+        .sidebar { width: var(--sidebar-width); background: #2c3e50; color: #fff; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; box-sizing: border-box; height: 100vh; }
+        .sidebar-top { display: flex; flex-direction: column; flex-grow: 1; min-height: 0; }
+        .sidebar h2 { font-size: 18px; margin-top: 0; color: #ecf0f1; border-bottom: 1px solid #34495e; padding-bottom: 15px; flex-shrink: 0; }
+        .table-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex-grow: 1; min-height: 0; padding-right: 5px; }
+        .table-item { padding: 12px 15px; border-radius: 6px; cursor: pointer; margin-bottom: 5px; font-size: 14px; transition: background 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .table-item:hover { background: #34495e; }
         .table-item.active { background: var(--primary); font-weight: bold; }
-        
-        .sidebar-footer { border-top: 1px solid #34495e; padding-top: 15px; display: flex; flex-direction: column; gap: 8px; }
+         
+        .sidebar-footer { border-top: 1px solid #34495e; padding-top: 15px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
 
         /* Ana İçerik */
-        .main-content { flex-grow: 1; padding: 30px; box-sizing: border-box; overflow-y: auto; background: var(--bg-color); }
+        .main-content { flex-grow: 1; padding: 30px; box-sizing: border-box; overflow-y: auto; background: var(--bg-color); height: 100vh; }
         .container { max-width: 1000px; margin: 0 auto; background: var(--card-bg); padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        
+         
         .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         h1 { margin: 0; color: var(--primary); font-size: 22px; }
-        
+         
         .actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 20px; }
         button { padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; transition: opacity 0.2s; }
         .btn-primary { background: var(--primary); color: #fff; }
@@ -48,24 +49,24 @@
         th.sortable { cursor: pointer; }
         th.sortable:hover { background: var(--primary-hover); }
         tr:nth-child(even) { background: #f9fbfd; }
-        
+         
         /* Girdiler ve Takvim Düzeltmesi */
         input[type="text"], select { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px; background: #fff; color: #333; }
-        
-        input[type="date"] { 
-            width: 100%; 
-            padding: 8px; 
-            box-sizing: border-box; 
-            border: 1px solid #ced4da; 
-            border-radius: 4px; 
-            font-size: 14px; 
-            background: #fff; 
-            color: #333; 
-            color-scheme: light; /* Takvimi karanlık mod yerine her zaman şeffaf/aydınlık moda zorlar */
+         
+        input[type="date"] {  
+            width: 100%;  
+            padding: 8px;  
+            box-sizing: border-box;  
+            border: 1px solid #ced4da;  
+            border-radius: 4px;  
+            font-size: 14px;  
+            background: #fff;  
+            color: #333;  
+            color-scheme: light;
         }
-        
+         
         .money-input { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px; text-align: right; background: #fff; color: #333; }
-        
+         
         .text-right { text-align: right; }
         .text-center { text-align: center; }
         .totals { background: #d9e1f2; font-weight: bold; font-size: 15px; }
@@ -93,13 +94,13 @@
 
 <!-- Sol Menü -->
 <div class="sidebar">
-    <div>
+    <div class="sidebar-top">
         <h2>Tablolarım</h2>
         <ul class="table-list" id="tableList"></ul>
     </div>
     <div class="sidebar-footer">
         <button class="btn-primary" onclick="openNewTableModal()" style="width:100%;">+ Yeni Tablo Ekle</button>
-        <button class="btn-danger" onclick="openDeleteTableModal()" style="width:100%;">🗑️ Tablo Kaldır</button>
+        <button class="btn-danger" onclick="openDeleteTableModal()" style="width:100%;">🗑 Tablo Kaldır</button>
         <button class="btn-success" onclick="exportData()" style="width:100%; font-size:13px;">💾 Tüm Yedeği İndir</button>
         <button class="btn-warning" onclick="document.getElementById('importFile').click()" style="width:100%; font-size:13px;">📂 Yedek Yükle</button>
         <input type="file" id="importFile" style="display:none" onchange="importData(event)">
@@ -112,7 +113,7 @@
         <div class="header-row">
             <h1 id="currentTableName">Tablo Yükleniyor...</h1>
         </div>
-        
+         
         <div class="actions">
             <button class="btn-primary" onclick="addRow()">+ Yeni Satır Ekle</button>
             <button class="btn-warning" onclick="window.print()">📄 PDF Olarak İndir</button>
@@ -182,7 +183,7 @@
     };
 
     let activeTableKey = Object.keys(db)[0] || "Ana Tablo";
-    let sortState = 0; 
+    let sortState = 0;  
 
     function saveDB() {
         localStorage.setItem('multiGelirGiderDB', JSON.stringify(db));
@@ -191,7 +192,7 @@
     function renderSidebar() {
         const listEl = document.getElementById('tableList');
         listEl.innerHTML = '';
-        
+         
         Object.keys(db).forEach(tableName => {
             const li = document.createElement('li');
             li.className = `table-item ${tableName === activeTableKey ? 'active' : ''}`;
@@ -212,11 +213,11 @@
 
     function renderApp() {
         renderSidebar();
-        
+         
         document.getElementById('currentTableName').innerText = activeTableKey;
         let rowsData = db[activeTableKey] || [];
         const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
-        
+         
         const indicator = document.getElementById('sortIndicator');
         if (sortState === 0) indicator.innerText = '↕';
         else if (sortState === 1) indicator.innerText = '↓ (Yeni)';
@@ -224,7 +225,7 @@
 
         const tbody = document.getElementById('tableBody');
         tbody.innerHTML = '';
-        
+         
         let tIncome = 0;
         let tExpense = 0;
 
@@ -264,7 +265,7 @@
         const tNet = tIncome - tExpense;
         document.getElementById('totalIncome').innerText = tIncome.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₺';
         document.getElementById('totalExpense').innerText = tExpense.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₺';
-        
+         
         const netEl = document.getElementById('totalNet');
         netEl.innerText = tNet.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₺';
         netEl.className = "text-right " + (tNet < 0 ? 'red' : (tNet > 0 ? 'green' : ''));
@@ -349,7 +350,7 @@
     function confirmDeleteTable() {
         const select = document.getElementById('deleteTableSelect');
         const targetTable = select.value;
-        
+         
         if (Object.keys(db).length <= 1) {
             alert("En az bir tablo kalmalıdır!");
             return;
